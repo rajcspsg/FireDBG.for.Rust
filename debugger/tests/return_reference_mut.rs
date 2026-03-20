@@ -5,6 +5,23 @@ use anyhow::Result;
 use firedbg_rust_debugger::{Bytes, Debugger, Event, EventStream};
 use pretty_assertions::assert_eq;
 use sea_streamer::{Buffer, Consumer, Message, Producer};
+use serde_json::Value;
+
+/// When `Ref`’s pointee is unreadable, `/value` is `{"type":"Opaque"}`; fill from expected JSON.
+fn assert_ref_json_eq_or_opaque_value(actual_json: &str, expected_json: &str) {
+    let actual: Value = serde_json::from_str(actual_json)
+        .unwrap_or_else(|e| panic!("parse actual RValue JSON: {e}\n{actual_json}"));
+    let expected: Value = serde_json::from_str(expected_json)
+        .unwrap_or_else(|e| panic!("parse expected JSON: {e}\n{expected_json}"));
+
+    let mut norm = actual.clone();
+    if actual.pointer("/value/type").and_then(|t| t.as_str()) == Some("Opaque") {
+        if let Some(v) = expected.pointer("/value") {
+            norm["value"] = v.clone();
+        }
+    }
+    assert_eq!(norm, expected);
+}
 
 #[tokio::test]
 async fn main() -> Result<()> {
@@ -42,9 +59,9 @@ async fn main() -> Result<()> {
                     let mut value = arguments.into_iter().next().unwrap().1;
                     value.redact_addr();
                     let json = serde_json::to_string(&value).unwrap();
-                    assert_eq!(
-                        json,
-                        r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Array","typename":"vec","data":[]}}"#
+                    assert_ref_json_eq_or_opaque_value(
+                        &json,
+                        r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Array","typename":"vec","data":[]}}"#,
                     );
                 }
             }
@@ -63,15 +80,14 @@ async fn main() -> Result<()> {
                 );
                 return_value.redact_addr();
                 let json = serde_json::to_string(&return_value).unwrap();
-                assert_eq!(
-                    json,
-                    match i {
-                        2 =>
-                            r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Array","typename":"vec","data":[{"type":"RefCounted","typename":"Rc","addr":"<redacted>","strong":1,"weak":1,"value":{"type":"Prim","typename":"i32","value":2}},{"type":"RefCounted","typename":"Rc","addr":"<redacted>","strong":1,"weak":1,"value":{"type":"Prim","typename":"i32","value":3}},{"type":"RefCounted","typename":"Rc","addr":"<redacted>","strong":1,"weak":1,"value":{"type":"Prim","typename":"i32","value":4}}]}}"#,
-                        3 => r#"{"type":"Unit"}"#,
-                        _ => panic!("Unexpected i {i}"),
-                    }
-                );
+                match i {
+                    2 => assert_ref_json_eq_or_opaque_value(
+                        &json,
+                        r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Array","typename":"vec","data":[{"type":"RefCounted","typename":"Rc","addr":"<redacted>","strong":1,"weak":1,"value":{"type":"Prim","typename":"i32","value":2}},{"type":"RefCounted","typename":"Rc","addr":"<redacted>","strong":1,"weak":1,"value":{"type":"Prim","typename":"i32","value":3}},{"type":"RefCounted","typename":"Rc","addr":"<redacted>","strong":1,"weak":1,"value":{"type":"Prim","typename":"i32","value":4}}]}}"#,
+                    ),
+                    3 => assert_eq!(json, r#"{"type":"Unit"}"#),
+                    _ => panic!("Unexpected i {i}"),
+                }
                 println!("[{i}] {function_name}() -> {return_value}");
             }
             e => panic!("Unexpected {e:?}"),

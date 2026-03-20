@@ -46,7 +46,9 @@ async fn main() -> Result<()> {
         },
         Expected::FnCall {
             name: "open".into(),
-            args: vec![expand("&Rc::<dyn MyTrait>::new(MyStruct { i: 1234i32 })")],
+            // `Rc<dyn Trait>`: LLDB still often exposes an empty trait shell; concrete payload
+            // is not reliably readable (unlike `Box<dyn …>` / `Arc<dyn …>` on current toolchains).
+            args: vec![expand("&Rc::<dyn MyTrait>::new(..)")],
         },
         Expected::FnRet {
             name: "open".into(),

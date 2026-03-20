@@ -71,7 +71,8 @@ async fn main() -> Result<()> {
         Expected::FnCall {
             name: "mutex".into(),
             args: vec![
-                "alloc::sync::Arc::new(std::sync::mutex::Mutex<u64>::new(1_u64))".to_owned(),
+                // Pretty-printed as poison::mutex + platform pthread internals (may contain `(?)`).
+                "alloc::sync::Arc::new(..1u64..)".to_owned(),
             ],
         },
         Expected::FnRet {
@@ -80,9 +81,7 @@ async fn main() -> Result<()> {
         },
         Expected::FnCall {
             name: "mutex".into(),
-            args: vec![
-                "alloc::sync::Arc::new(std::sync::mutex::Mutex<u64>::new(2_u64))".to_owned(),
-            ],
+            args: vec!["alloc::sync::Arc::new(..2u64..)".to_owned()],
         },
         Expected::FnRet {
             name: "mutex".into(),
@@ -90,9 +89,7 @@ async fn main() -> Result<()> {
         },
         Expected::FnCall {
             name: "mutex".into(),
-            args: vec![
-                "alloc::sync::Arc::new(std::sync::mutex::Mutex<u64>::new(3_u64))".to_owned(),
-            ],
+            args: vec!["alloc::sync::Arc::new(..3u64..)".to_owned()],
         },
         Expected::FnRet {
             name: "mutex".into(),
@@ -101,17 +98,7 @@ async fn main() -> Result<()> {
         Expected::FnCall {
             name: "rwlock".into(),
             args: vec![
-                "alloc::sync::Arc::new(std::sync::rwlock::RwLock<u64>::new(1_u64))".to_owned(),
-            ],
-        },
-        Expected::FnRet {
-            name: "rwlock".into(),
-            value: "()".into(),
-        },
-        Expected::FnCall {
-            name: "rwlock".into(),
-            args: vec![
-                "alloc::sync::Arc::new(std::sync::rwlock::RwLock<u64>::new(2_u64))".to_owned(),
+                "alloc::sync::Arc::new(..RwLock<u64>..1u64..)".to_owned(),
             ],
         },
         Expected::FnRet {
@@ -121,7 +108,17 @@ async fn main() -> Result<()> {
         Expected::FnCall {
             name: "rwlock".into(),
             args: vec![
-                "alloc::sync::Arc::new(std::sync::rwlock::RwLock<u64>::new(3_u64))".to_owned(),
+                "alloc::sync::Arc::new(..RwLock<u64>..2u64..)".to_owned(),
+            ],
+        },
+        Expected::FnRet {
+            name: "rwlock".into(),
+            value: "()".into(),
+        },
+        Expected::FnCall {
+            name: "rwlock".into(),
+            args: vec![
+                "alloc::sync::Arc::new(..RwLock<u64>..3u64..)".to_owned(),
             ],
         },
         Expected::FnRet {

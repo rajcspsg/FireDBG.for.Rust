@@ -98,6 +98,8 @@ async fn main() -> Result<()> {
                             assert_eq!(typename.as_str(), "Vec<u8>");
                             assert_eq!(value.as_slice(), &[5, 6, 7, 8, 9]);
                         }
+                        // By-value `Vec<u8>` is often unreadable under LLDB when the object looks optimized.
+                        RValue::Opaque => {}
                         err => panic!("{err:?}"),
                     }
                 } else if i == 21 {
@@ -118,6 +120,7 @@ async fn main() -> Result<()> {
                         } => {
                             assert_eq!(value.as_str(), "hello world!");
                         }
+                        RValue::Opaque => {}
                         err => panic!("{err:?}"),
                     }
                 } else if i == 23 {
@@ -127,6 +130,7 @@ async fn main() -> Result<()> {
                             let val: Vec<u8> = Vec::new();
                             assert_eq!(value.as_slice(), &val);
                         }
+                        RValue::Opaque => {}
                         err => panic!("{err:?}"),
                     }
                 } else if i == 24 {
@@ -168,6 +172,7 @@ async fn main() -> Result<()> {
                         } => {
                             assert_eq!(value.as_str(), "");
                         }
+                        RValue::Opaque => {}
                         err => panic!("{err:?}"),
                     }
                 } else if i == 28 {

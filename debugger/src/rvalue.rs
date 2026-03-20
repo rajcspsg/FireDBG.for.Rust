@@ -53,6 +53,7 @@ impl RValueLift for RValue {
                     fields.insert("value".to_owned(), RValue::Prim(prim));
                 } else if typename.starts_with("&dyn ")
                     || typename.starts_with("alloc::boxed::Box<dyn ")
+                    || typename.starts_with("dyn ")
                 {
                     if fields.get("pointer").is_some() && fields.get("vtable").is_some() {
                         let pointer = fields.swap_remove("pointer");

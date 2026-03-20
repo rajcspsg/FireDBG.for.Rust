@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
         Expected::FnCall {
             name: "capture".into(),
             args: vec![
-                "&alloc::boxed::Box::<dyn core::fmt::Debug>::new(\"hello\")".to_owned()
+                "&alloc::boxed::Box::<dyn core::fmt::Debug>::new(\"hello\")".to_owned(),
             ],
         },
         Expected::FnRet {
@@ -52,9 +52,9 @@ async fn main() -> Result<()> {
         },
         Expected::FnCall {
             name: "capture".into(),
-            args: vec![
-                expand("&Option<Box<dyn core::fmt::Debug>>::Some(Box::<dyn core::fmt::Debug>::new(\"hello\"))")
-            ],
+            args: vec![expand(
+                "&Option<Box<dyn core::fmt::Debug>>::Some(Box::<dyn core::fmt::Debug>::new(\"hello\"))",
+            )],
         },
         Expected::FnRet {
             name: "capture".into(),

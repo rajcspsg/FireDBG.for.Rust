@@ -89,7 +89,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 6,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -112,7 +112,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 18,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -135,7 +135,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 22,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -158,7 +158,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 30,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -181,7 +181,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 41,
-                column: Some(9),
+                column: Some(8),
             },
         },
         FunctionDef {
@@ -204,7 +204,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 50,
-                column: Some(13),
+                column: Some(12),
             },
         },
         FunctionDef {
@@ -227,7 +227,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 59,
-                column: Some(9),
+                column: Some(8),
             },
         },
         FunctionDef {
@@ -250,7 +250,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 63,
-                column: Some(9),
+                column: Some(8),
             },
         },
     ]

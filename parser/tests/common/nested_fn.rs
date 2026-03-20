@@ -141,7 +141,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 27,
-                column: Some(1),
+                column: Some(0),
             },
         },
         FunctionDef {
@@ -163,7 +163,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 25,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -185,7 +185,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 14,
-                column: Some(9),
+                column: Some(8),
             },
         },
         FunctionDef {
@@ -207,7 +207,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 24,
-                column: Some(9),
+                column: Some(8),
             },
         },
         FunctionDef {
@@ -229,7 +229,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 23,
-                column: Some(13),
+                column: Some(12),
             },
         },
         FunctionDef {
@@ -251,7 +251,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 18,
-                column: Some(46),
+                column: Some(45),
             },
         },
         FunctionDef {
@@ -273,7 +273,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 20,
-                column: Some(50),
+                column: Some(49),
             },
         },
         FunctionDef {
@@ -294,7 +294,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 41,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -316,7 +316,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 39,
-                column: Some(9),
+                column: Some(8),
             },
         },
         FunctionDef {
@@ -338,7 +338,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 38,
-                column: Some(13),
+                column: Some(12),
             },
         },
         FunctionDef {
@@ -360,7 +360,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 37,
-                column: Some(17),
+                column: Some(16),
             },
         },
         FunctionDef {
@@ -381,7 +381,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 53,
-                column: Some(9),
+                column: Some(8),
             },
         },
         FunctionDef {
@@ -403,7 +403,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 51,
-                column: Some(13),
+                column: Some(12),
             },
         },
         FunctionDef {
@@ -425,7 +425,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 50,
-                column: Some(17),
+                column: Some(16),
             },
         },
         FunctionDef {
@@ -447,7 +447,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 49,
-                column: Some(21),
+                column: Some(20),
             },
         },
         FunctionDef {
@@ -468,7 +468,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 65,
-                column: Some(13),
+                column: Some(12),
             },
         },
         FunctionDef {
@@ -490,7 +490,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 63,
-                column: Some(17),
+                column: Some(16),
             },
         },
         FunctionDef {
@@ -512,7 +512,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 62,
-                column: Some(21),
+                column: Some(20),
             },
         },
         FunctionDef {
@@ -534,7 +534,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 61,
-                column: Some(25),
+                column: Some(24),
             },
         },
         FunctionDef {
@@ -557,7 +557,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 80,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -579,7 +579,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 78,
-                column: Some(9),
+                column: Some(8),
             },
         },
         FunctionDef {
@@ -601,7 +601,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 75,
-                column: Some(36),
+                column: Some(35),
             },
         },
         FunctionDef {
@@ -623,7 +623,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 76,
-                column: Some(36),
+                column: Some(35),
             },
         },
         FunctionDef {
@@ -646,7 +646,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 104,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -668,7 +668,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 85,
-                column: Some(38),
+                column: Some(37),
             },
         },
         FunctionDef {
@@ -690,7 +690,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 102,
-                column: Some(9),
+                column: Some(8),
             },
         },
         FunctionDef {
@@ -712,7 +712,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 88,
-                column: Some(44),
+                column: Some(43),
             },
         },
         FunctionDef {
@@ -734,7 +734,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 100,
-                column: Some(13),
+                column: Some(12),
             },
         },
         FunctionDef {
@@ -756,7 +756,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 98,
-                column: Some(17),
+                column: Some(16),
             },
         },
         FunctionDef {
@@ -778,7 +778,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 92,
-                column: Some(50),
+                column: Some(49),
             },
         },
         FunctionDef {
@@ -800,7 +800,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 94,
-                column: Some(54),
+                column: Some(53),
             },
         },
         FunctionDef {
@@ -824,7 +824,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 118,
-                column: Some(5),
+                column: Some(4),
             },
         },
         FunctionDef {
@@ -846,7 +846,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 111,
-                column: Some(45),
+                column: Some(44),
             },
         },
         FunctionDef {
@@ -868,7 +868,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 113,
-                column: Some(38),
+                column: Some(37),
             },
         },
         FunctionDef {
@@ -890,7 +890,7 @@ pub fn get_breakpoints() -> Vec<FunctionDef> {
             },
             end: LineColumn {
                 line: 115,
-                column: Some(42),
+                column: Some(41),
             },
         },
     ]

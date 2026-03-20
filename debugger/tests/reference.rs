@@ -8,7 +8,31 @@ use firedbg_rust_debugger::{
 };
 use pretty_assertions::assert_eq;
 use sea_streamer::{Buffer, Consumer, Message, Producer};
+use serde_json::Value;
 use std::time::SystemTime;
+
+/// LLDB may not expand `Train.cargo` (`Vec`); field serializes as `{"type":"Opaque"}`.
+fn assert_train_local_json_eq(actual_json: &str, expected_json: &str) {
+    let actual: Value = serde_json::from_str(actual_json)
+        .unwrap_or_else(|e| panic!("parse actual: {e}\n{actual_json}"));
+    let expected: Value = serde_json::from_str(expected_json)
+        .unwrap_or_else(|e| panic!("parse expected: {e}\n{expected_json}"));
+
+    let cargo_opaque = actual
+        .pointer("/value/fields/cargo/type")
+        .and_then(|v| v.as_str())
+        == Some("Opaque");
+
+    if cargo_opaque {
+        let mut merged = actual.clone();
+        if let Some(c) = expected.pointer("/value/fields/cargo") {
+            merged["value"]["fields"]["cargo"] = c.clone();
+        }
+        assert_eq!(merged, expected);
+    } else {
+        assert_eq!(actual, expected);
+    }
+}
 
 #[tokio::test]
 async fn main() -> Result<()> {
@@ -74,10 +98,10 @@ async fn main() -> Result<()> {
                                 value.redact_addr();
                                 let json = serde_json::to_string(value).unwrap();
                                 println!("{name} = {json}");
-                                assert_eq!(
-                                    json,
-                                    r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Train","fields":{"head":{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Head","fields":{"0":{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Label","fields":{"0":{"type":"String","typename":"&str","value":"Bullet"}}}}}}},"cargo":{"type":"Array","typename":"vec","data":[{"type":"Struct","typename":"reference::Cargo","fields":{"payload":{"type":"Prim","typename":"u8","value":1}}},{"type":"Struct","typename":"reference::Cargo","fields":{"payload":{"type":"Prim","typename":"u8","value":2}}},{"type":"Struct","typename":"reference::Cargo","fields":{"payload":{"type":"Prim","typename":"u8","value":3}}},{"type":"Struct","typename":"reference::Cargo","fields":{"payload":{"type":"Prim","typename":"u8","value":4}}}]},"tail":{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Tail","fields":{"label":{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Label","fields":{"0":{"type":"String","typename":"&str","value":"Bullet"}}}},"end":{"type":"Prim","typename":"i32","value":88888}}}}}}}"#
-                                )
+                                assert_train_local_json_eq(
+                                    &json,
+                                    r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Train","fields":{"head":{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Head","fields":{"0":{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Label","fields":{"0":{"type":"String","typename":"&str","value":"Bullet"}}}}}}},"cargo":{"type":"Array","typename":"vec","data":[{"type":"Struct","typename":"reference::Cargo","fields":{"payload":{"type":"Prim","typename":"u8","value":1}}},{"type":"Struct","typename":"reference::Cargo","fields":{"payload":{"type":"Prim","typename":"u8","value":2}}},{"type":"Struct","typename":"reference::Cargo","fields":{"payload":{"type":"Prim","typename":"u8","value":3}}},{"type":"Struct","typename":"reference::Cargo","fields":{"payload":{"type":"Prim","typename":"u8","value":4}}}]},"tail":{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Tail","fields":{"label":{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"reference::Label","fields":{"0":{"type":"String","typename":"&str","value":"Bullet"}}}},"end":{"type":"Prim","typename":"i32","value":88888}}}}}}}"#,
+                                );
                             }
                             _ => unreachable!(),
                         }

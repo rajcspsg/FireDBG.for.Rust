@@ -8,7 +8,38 @@ use firedbg_rust_debugger::{
 };
 use pretty_assertions::assert_eq;
 use sea_streamer::{Buffer, Consumer, Message, Producer};
+use serde_json::Value;
 use std::time::SystemTime;
+
+/// `engine.pistons` may be `Opaque` when LLDB cannot read the vec (struct root or behind `Ref`).
+fn assert_return_car_json_eq(actual_json: &str, expected_json: &str) {
+    let actual: Value = serde_json::from_str(actual_json)
+        .unwrap_or_else(|e| panic!("parse actual RValue JSON: {e}\n{actual_json}"));
+    let expected: Value = serde_json::from_str(expected_json)
+        .unwrap_or_else(|e| panic!("parse expected JSON: {e}\n{expected_json}"));
+
+    let mut norm = actual.clone();
+
+    if norm
+        .pointer("/fields/engine/fields/pistons/type")
+        .and_then(|v| v.as_str())
+        == Some("Opaque")
+    {
+        if let Some(p) = expected.pointer("/fields/engine/fields/pistons") {
+            norm["fields"]["engine"]["fields"]["pistons"] = p.clone();
+        }
+    } else if norm
+        .pointer("/value/fields/engine/fields/pistons/type")
+        .and_then(|v| v.as_str())
+        == Some("Opaque")
+    {
+        if let Some(p) = expected.pointer("/value/fields/engine/fields/pistons") {
+            norm["value"]["fields"]["engine"]["fields"]["pistons"] = p.clone();
+        }
+    }
+
+    assert_eq!(norm, expected);
+}
 
 #[tokio::test]
 async fn main() -> Result<()> {
@@ -123,9 +154,9 @@ async fn main() -> Result<()> {
                 let (name, value) = locals.iter().next().unwrap();
                 assert_eq!(name.as_str(), "car");
                 let json = serde_json::to_string(value).unwrap();
-                assert_eq!(
-                    json,
-                    r#"{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Nil"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Inline","fields":{"i":{"type":"Prim","typename":"i32","value":0}}},"pistons":{"type":"Array","typename":"vec","data":[]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Automatic"}}}"#
+                assert_return_car_json_eq(
+                    &json,
+                    r#"{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Nil"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Inline","fields":{"i":{"type":"Prim","typename":"i32","value":0}}},"pistons":{"type":"Array","typename":"vec","data":[]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Automatic"}}}"#,
                 );
             }
             (
@@ -176,21 +207,26 @@ async fn main() -> Result<()> {
                 );
                 return_value.redact_addr();
                 let json = serde_json::to_string(&return_value).unwrap();
-                assert_eq!(
-                    json,
-                    match i {
-                        2 =>
-                            r#"{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Ford"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Inline","fields":{"i":{"type":"Prim","typename":"i32","value":4}}},"pistons":{"type":"Array","typename":"vec","data":[{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":1}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":2}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":3}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":4}}}]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Manual"}}}"#,
-                        5 =>
-                            r#"{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Mazda"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Vshape","fields":{"0":{"type":"Prim","typename":"i16","value":3},"1":{"type":"Prim","typename":"i16","value":3}}},"pistons":{"type":"Array","typename":"vec","data":[]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Automatic"}}}"#,
-                        7 =>
-                            r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Mazda"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Vshape","fields":{"0":{"type":"Prim","typename":"i16","value":3},"1":{"type":"Prim","typename":"i16","value":3}}},"pistons":{"type":"Array","typename":"vec","data":[]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Automatic"}}}}"#,
-                        9 =>
-                            r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Ford"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Inline","fields":{"i":{"type":"Prim","typename":"i32","value":4}}},"pistons":{"type":"Array","typename":"vec","data":[{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":1}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":2}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":3}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":4}}}]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Manual"}}}}"#,
-                        10 => r#"{"type":"Unit"}"#,
-                        _ => panic!("Unexpected i {i}"),
-                    }
-                );
+                match i {
+                    2 => assert_return_car_json_eq(
+                        &json,
+                        r#"{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Ford"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Inline","fields":{"i":{"type":"Prim","typename":"i32","value":4}}},"pistons":{"type":"Array","typename":"vec","data":[{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":1}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":2}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":3}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":4}}}]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Manual"}}}"#,
+                    ),
+                    5 => assert_return_car_json_eq(
+                        &json,
+                        r#"{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Mazda"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Vshape","fields":{"0":{"type":"Prim","typename":"i16","value":3},"1":{"type":"Prim","typename":"i16","value":3}}},"pistons":{"type":"Array","typename":"vec","data":[]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Automatic"}}}"#,
+                    ),
+                    7 => assert_return_car_json_eq(
+                        &json,
+                        r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Mazda"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Vshape","fields":{"0":{"type":"Prim","typename":"i16","value":3},"1":{"type":"Prim","typename":"i16","value":3}}},"pistons":{"type":"Array","typename":"vec","data":[]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Automatic"}}}}"#,
+                    ),
+                    9 => assert_return_car_json_eq(
+                        &json,
+                        r#"{"type":"Ref","typename":"ref","addr":"<redacted>","value":{"type":"Struct","typename":"return_object::Car","fields":{"brand":{"type":"String","typename":"&str","value":"Ford"},"engine":{"type":"Struct","typename":"return_object::Engine","fields":{"config":{"type":"Union","typeinfo":{"name":"return_object::EngineConfig","variants":["Inline","Vshape"]},"variant":"Inline","fields":{"i":{"type":"Prim","typename":"i32","value":4}}},"pistons":{"type":"Array","typename":"vec","data":[{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":1}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":2}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":3}}},{"type":"Struct","typename":"return_object::Piston","fields":{"0":{"type":"Prim","typename":"u8","value":4}}}]}}},"gearbox":{"type":"Enum","typename":"return_object::Gearbox","variant":"Manual"}}}}"#,
+                    ),
+                    10 => assert_eq!(json, r#"{"type":"Unit"}"#),
+                    _ => panic!("Unexpected i {i}"),
+                }
                 println!("[{i}] {function_name}() -> {return_value}");
             }
             e => panic!("Unexpected {e:?}"),

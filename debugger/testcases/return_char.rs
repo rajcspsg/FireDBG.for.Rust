@@ -5,17 +5,18 @@ struct Alpha {
     c1: char,
     c2: char,
 }
+#[inline(never)]
 fn alpha() -> Alpha {
-    Alpha {
-        c1: X,
-        c2: O,
-    }
+    let c1 = X;
+    let c2 = O;
+    Alpha { c1, c2 }
 }
 
 struct Beta {
     arr: [i32; 3],
     c: char,
 }
+#[inline(never)]
 fn beta(arr: [i32; 3]) -> Beta {
     Beta {
         arr,
@@ -27,6 +28,7 @@ struct Charlie {
     arr: [[char; 3]; 3],
     c: char,
 }
+#[inline(never)]
 fn charlie(arr: [[char; 3]; 3]) -> Charlie {
     Charlie {
         arr,
@@ -34,6 +36,7 @@ fn charlie(arr: [[char; 3]; 3]) -> Charlie {
     }
 }
 
+#[inline(never)]
 fn delta(a: bool, c: char) -> Option<char> {
     if a {
         Some(c)

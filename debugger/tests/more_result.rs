@@ -33,8 +33,9 @@ async fn main() -> Result<()> {
         fn str_from_utf8(b: &[u8]) -> Result<&str, std::str::Utf8Error> {
             std::str::from_utf8(b)
         }
-        fn string_from_utf8(b: Vec<u8>) -> Result<String, std::string::FromUtf8Error> {
-            std::hint::black_box(String::from_utf8(b))
+        // Use &[u8] like str_from_utf8: by-value Vec<u8> often shows as Opaque under LLDB.
+        fn string_from_utf8(b: &[u8]) -> Result<String, std::string::FromUtf8Error> {
+            String::from_utf8(b.to_vec())
         }
         fn result_boxed(i: i32) -> Result<Box<String>, ()> {
             if i == 0 {
@@ -58,8 +59,8 @@ async fn main() -> Result<()> {
             assert!(open_file_3().is_err());
             assert!(str_from_utf8(&{valid_str}).is_ok());
             assert!(str_from_utf8(&{invalid_str}).is_err());
-            assert!(string_from_utf8(vec!{valid_str}).is_ok());
-            assert!(string_from_utf8(vec!{invalid_str}).is_err());
+            assert!(string_from_utf8(&{valid_str}).is_ok());
+            assert!(string_from_utf8(&{invalid_str}).is_err());
             assert!(passthru(result_boxed(0)).is_ok());
             assert!(passthru(result_boxed(1)).is_err());
 
@@ -153,7 +154,7 @@ async fn main() -> Result<()> {
         },
         Expected::FnCall {
             name: "string_from_utf8".into(),
-            args: vec![valid_str],
+            args: vec![format!("&{valid_str}")],
         },
         Expected::FnRet {
             name: "string_from_utf8".into(),
@@ -162,7 +163,7 @@ async fn main() -> Result<()> {
         },
         Expected::FnCall {
             name: "string_from_utf8".into(),
-            args: vec![invalid_str],
+            args: vec![format!("&{invalid_str}")],
         },
         Expected::FnRet {
             name: "string_from_utf8".into(),

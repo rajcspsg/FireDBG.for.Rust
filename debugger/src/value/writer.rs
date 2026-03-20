@@ -10,6 +10,32 @@ use std::ops::IndexMut;
 
 type Result<T> = std::result::Result<T, WriteErr>;
 
+/// For `dyn Trait` stored inline (e.g. in `RcBox`), LLDB often types it as an empty trait object.
+/// The payload is a fat pointer `(data_ptr, vtable)`; resolve `data_ptr` via the allocation map.
+fn write_dyn_payload_from_inline_fat_ptr(
+    t: &mut RValueWriter,
+    fat_ptr_addr: u64,
+    r: usize,
+) -> Option<Bytes> {
+    let mem = read_process_memory(fat_ptr_addr, 16).ok()?;
+    if mem.len() < 16 {
+        return None;
+    }
+    let data_ptr = u64::from_ne_bytes(mem[..8].try_into().ok()?);
+    if data_ptr == 0 {
+        return None;
+    }
+    let name = t.allocated_at(data_ptr)?;
+    let cty = get_sb_type(name)?;
+    let sb = sb_value_from_addr("0", data_ptr, &cty).ok()?;
+    write_value(t, &sb, r).ok()
+}
+
+enum RcValuePayload {
+    Sb(SBValue),
+    Bytes(Bytes),
+}
+
 const OPTION_BOX: &str = "core::option::Option<alloc::boxed::Box<";
 const RESULT_BOX: &str = "core::result::Result<alloc::boxed::Box<";
 const RESULT_T: &str = "core::result::Result<";
@@ -297,7 +323,11 @@ fn write_base_value(t: &mut RValueWriter, v: &SBValue, mut r: usize) -> Result<B
     }
     if type_class.contains(TypeClass::Struct) {
         let typename = vtype.name();
-        if (typename.starts_with("&dyn ") || typename.starts_with(BOX_DYN)) && v.num_children() == 2
+        // RcBox/ArcInner store `dyn Trait` as a fat pointer (pointer + vtable), not as `Box<dyn …>`.
+        if (typename.starts_with("&dyn ")
+            || typename.starts_with(BOX_DYN)
+            || typename.starts_with("dyn "))
+            && v.num_children() == 2
         {
             let mut fields = Vec::new();
             for c in v.children() {
@@ -307,9 +337,32 @@ fn write_base_value(t: &mut RValueWriter, v: &SBValue, mut r: usize) -> Result<B
                     } else if name == "pointer" {
                         let addr = value_to_bytes::<8>(&c)?;
                         let addr = u64::from_ne_bytes(addr);
-                        if let Some(pointee) = t.allocated_at(addr) {
-                            if let Some(pointee) = get_sb_type(pointee) {
-                                let value = t.pointer_to("ptr", addr, &pointee, r)?;
+                        if addr != 0 {
+                            // Prefer allocation tracing (concrete type from our Box map).
+                            let mut ptr_field = if let Some(pointee_name) = t.allocated_at(addr) {
+                                if let Some(pointee_ty) = get_sb_type(pointee_name) {
+                                    t.pointer_to("ptr", addr, &pointee_ty, r).ok()
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            };
+                            // Rust 1.9x: Box<dyn …> data pointers are often missing from the
+                            // allocation map; LLDB can still resolve the concrete type via
+                            // Dereference() on the `pointer` field.
+                            if ptr_field.is_none() {
+                                let deref = c.dereference();
+                                if deref.is_valid() && deref.is_success() {
+                                    let a = Addr::from(addr);
+                                    t.alloc_env(a);
+                                    if let Ok(val) = write_value(t, &deref, r) {
+                                        t.set_env(a, val);
+                                        ptr_field = Some(t.ref_v("ptr", a));
+                                    }
+                                }
+                            }
+                            if let Some(value) = ptr_field {
                                 fields.push(("pointer".to_owned(), value));
                             }
                         }
@@ -737,17 +790,88 @@ impl<'a> RValueWriter<'a> {
             ),
             _ => panic!("Unexpected {ty}"),
         };
-        let pointee = get_sb_type(pointee_name).ok_or(WriteErr)?;
         let counter = get_sb_type(counter_type).ok_or(WriteErr)?;
-        let strong = sb_value_from_addr("0", addr, &counter)?;
-        let ptr_size = core::mem::size_of::<usize>() as u64;
-        let weak = sb_value_from_addr("0", addr + ptr_size, &counter)?;
-        let sb_value = sb_value_from_addr("0", addr + 2 * ptr_size, &pointee)?;
-        let addr = Addr::from(addr);
-        self.alloc_env(addr); // it's very important to alloc first before writing value
-        let strong = write_value(self, &strong, 3)?;
-        let weak = write_value(self, &weak, 3)?;
-        let value = write_value(self, &sb_value, r)?;
+        let addr_env = Addr::from(addr);
+        self.alloc_env(addr_env);
+
+        let rcbox_typename = format!("{}<{}>", inner_type, pointee_name);
+        let (strong_sb, weak_sb, value_src) = (|| -> Result<(SBValue, SBValue, RcValuePayload)> {
+            let mut from_children = None;
+            if let Some(rcbox_ty) = get_sb_type(&rcbox_typename) {
+                if let Ok(whole) = sb_value_from_addr("0", addr, &rcbox_ty) {
+                    if whole.is_valid() && whole.is_success() {
+                        let s = whole.child_member_with_name("strong");
+                        let w = whole.child_member_with_name("weak");
+                        let v = whole.child_member_with_name(data_field);
+                        if let (Some(s), Some(w), Some(v)) = (s, w, v) {
+                            if s.is_valid()
+                                && s.is_success()
+                                && w.is_valid()
+                                && w.is_success()
+                                && v.is_valid()
+                                && v.is_success()
+                            {
+                                from_children = Some((s, w, v));
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some((s, w, v)) = from_children {
+                // `RcBox<dyn Trait>`: LLDB may type `value` as an empty trait object; the real
+                // payload is behind the fat pointer's `pointer` field (same as `Box<dyn …>`).
+                if pointee_name.starts_with("dyn ") {
+                    let v = v.non_synthetic_value();
+                    let ptr_child = v
+                        .child_member_with_name("pointer")
+                        .or_else(|| v.child_member_with_name("0"))
+                        .or_else(|| (v.num_children() > 0).then(|| v.child_at_index(0)));
+                    if let Some(p) = ptr_child {
+                        let d = p.dereference();
+                        if d.is_valid() && d.is_success() {
+                            if let Ok(bytes) = write_value(self, &d, r) {
+                                return Ok((s, w, RcValuePayload::Bytes(bytes)));
+                            }
+                        }
+                    }
+                    if let Some(bytes) =
+                        write_dyn_payload_from_inline_fat_ptr(self, v.load_address(), r)
+                    {
+                        return Ok((s, w, RcValuePayload::Bytes(bytes)));
+                    }
+                }
+                return Ok((s, w, RcValuePayload::Sb(v)));
+            }
+            let ptr_size = core::mem::size_of::<usize>() as u64;
+            let value_addr = addr + 2 * ptr_size;
+            let pointee = get_sb_type(pointee_name).ok_or(WriteErr)?;
+            let strong_sb = sb_value_from_addr("0", addr, &counter)?;
+            let weak_sb = sb_value_from_addr("0", addr + ptr_size, &counter)?;
+            if pointee_name.starts_with("dyn ") {
+                if let Some(bytes) = write_dyn_payload_from_inline_fat_ptr(self, value_addr, r) {
+                    return Ok((strong_sb, weak_sb, RcValuePayload::Bytes(bytes)));
+                }
+                let fat_ref = format!("&{}", pointee_name);
+                let value_sb = if let Some(ft) = get_sb_type(&fat_ref) {
+                    match sb_value_from_addr("0", value_addr, &ft) {
+                        Ok(v) => v,
+                        Err(_) => sb_value_from_addr("0", value_addr, &pointee)?,
+                    }
+                } else {
+                    sb_value_from_addr("0", value_addr, &pointee)?
+                };
+                return Ok((strong_sb, weak_sb, RcValuePayload::Sb(value_sb)));
+            }
+            let value_sb = sb_value_from_addr("0", value_addr, &pointee)?;
+            Ok((strong_sb, weak_sb, RcValuePayload::Sb(value_sb)))
+        })()?;
+
+        let strong = write_value(self, &strong_sb, 3)?;
+        let weak = write_value(self, &weak_sb, 3)?;
+        let value = match value_src {
+            RcValuePayload::Sb(sb) => write_value(self, &sb, r)?,
+            RcValuePayload::Bytes(b) => b,
+        };
         Ok(self.struct_v(
             &format!("{}<{}>", inner_type, pointee_name),
             [

@@ -3,6 +3,18 @@ mod common;
 pub use firedbg_rust_parser::*;
 pub use pretty_assertions::assert_eq;
 
+/// Cargo does not guarantee stable ordering for targets in metadata; normalize for tests.
+fn normalize_workspace(mut ws: Workspace) -> Workspace {
+    ws.packages.sort_by(|a, b| a.name.cmp(&b.name));
+    for p in &mut ws.packages {
+        p.dependencies.sort_by(|a, b| a.name.cmp(&b.name));
+        p.binaries.sort_by(|a, b| a.name.cmp(&b.name));
+        p.tests.sort_by(|a, b| a.name.cmp(&b.name));
+        p.examples.sort_by(|a, b| a.name.cmp(&b.name));
+    }
+    ws
+}
+
 async fn run_workspace_parsing(
     root_dir: &str,
     workspace_expected: Workspace,
@@ -20,10 +32,12 @@ async fn run_workspace_parsing(
     serde::to_bson_file(&format!("{bson_path}.bson"), &workspace).await?;
     serde::to_json_file(&format!("{bson_path}.json"), &workspace).await?;
 
-    assert_eq!(
-        workspace_expected,
-        serde::from_bson_file(&format!("{}.bson", bson_path)).await?,
-    );
+    let workspace = normalize_workspace(workspace);
+    let workspace_expected = normalize_workspace(workspace_expected);
+    let roundtrip: Workspace = serde::from_bson_file(&format!("{}.bson", bson_path)).await?;
+    let roundtrip = normalize_workspace(roundtrip);
+
+    assert_eq!(workspace_expected, roundtrip);
 
     assert_eq!(workspace_expected, workspace);
 
@@ -160,10 +174,24 @@ async fn parse_example_workspace() -> anyhow::Result<()> {
     )
     .await?;
 
-    let main_one_package = &workspace.packages[0];
-    let main_one = &main_one_package.binaries[0];
-    let simple_tests = &main_one_package.tests[0];
-    let demo = &main_one_package.examples[0];
+    let main_one_package = workspace
+        .find_package("main-one")
+        .expect("package main-one");
+    let main_one = main_one_package
+        .binaries
+        .iter()
+        .find(|b| b.name == "main-one")
+        .expect("binary main-one");
+    let simple_tests = main_one_package
+        .tests
+        .iter()
+        .find(|t| t.name == "simple_tests")
+        .expect("test simple_tests");
+    let demo = main_one_package
+        .examples
+        .iter()
+        .find(|e| e.name == "demo")
+        .expect("example demo");
 
     // /Applications/MAMP/htdocs/FireDBG.for.Rust.Internal/parser/tests/example-workspace/target/debug/main-one
     println!("binary_path {}", main_one.get_binary_path(&workspace));
@@ -224,7 +252,10 @@ async fn parse_example_without_workspace() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Large workspace fixture is not vendored in this repository. Clone the sea-streamer repo
+/// under `parser/tests/sea-streamer` and run `cargo test -p firedbg-rust-parser --test workspace_tests -- --ignored`.
 #[tokio::test]
+#[ignore = "requires parser/tests/sea-streamer checkout (optional large fixture)"]
 async fn parse_sea_streamer() -> anyhow::Result<()> {
     run_workspace_parsing(
         concat!(env!("CARGO_MANIFEST_DIR"), "/tests/sea-streamer"),
