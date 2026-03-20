@@ -52,6 +52,9 @@ get_firedbg_version() {
         rustc\ 1.88.*)
             local _firedbg_version="1.88.0"
             ;;
+        rustc\ 1.89.*)
+            local _firedbg_version="1.89.0"
+            ;;
         *)
             err "no precompiled binaries available for $_rustc_version";
             ;;
