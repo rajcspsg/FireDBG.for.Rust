@@ -2,7 +2,60 @@ use std::{env, fs, path::Path};
 
 pub type Error = Box<dyn std::error::Error>;
 
+/// `cc` forwards `CXXFLAGS` into every compile invocation. Fedora / RPM `%optflags` and similar
+/// setups sometimes add **linker-only** flags such as `--no-undefined`. Those are invalid for
+/// `c++ -c` and Clang reports: `unrecognized command-line option '--no-undefined'`.
+fn sanitize_cxxflags_env_for_compile_step() {
+    /// Tokens that must not be passed to a compile-only (`-c`) C++ invocation.
+    fn keep_token(tok: &str) -> bool {
+        if tok == "--no-undefined" {
+            return false;
+        }
+        if tok.starts_with("-Wl,--no-undefined") {
+            return false;
+        }
+        if tok == "-Wl,-z,defs" || tok == "-Wl,--no-allow-shlib-undefined" {
+            return false;
+        }
+        true
+    }
+
+    fn scrub(value: &str) -> Option<String> {
+        let original: Vec<&str> = value.split_ascii_whitespace().collect();
+        let parts: Vec<&str> = original
+            .iter()
+            .copied()
+            .filter(|t| keep_token(t))
+            .collect();
+        if parts.len() == original.len() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
+    }
+
+    let cxx_entries: Vec<(String, String)> = env::vars()
+        .filter(|(key, _)| {
+            matches!(
+                key.as_str(),
+                "CXXFLAGS" | "HOST_CXXFLAGS" | "TARGET_CXXFLAGS"
+            ) || key.starts_with("CXXFLAGS_")
+        })
+        .collect();
+
+    for (key, value) in cxx_entries {
+        if let Some(cleaned) = scrub(&value) {
+            println!(
+                "cargo:warning=lldb build: removed linker-only flag(s) from {key} (not valid for C++ compile step; often set on Fedora/RPM)"
+            );
+            env::set_var(&key, cleaned);
+        }
+    }
+}
+
 fn main() -> Result<(), Error> {
+    sanitize_cxxflags_env_for_compile_step();
+
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let weak_linkage = match env::var("CARGO_FEATURE_WEAK_LINKAGE") {
         Ok(_) => true,

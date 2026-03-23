@@ -74,6 +74,29 @@
 	sudo update-alternatives --config c++
 	```
 
+	On Fedora, current FireDBG `lldb` build scripts compile the C++ bridge with the default `c++` (usually g++) and link `libstdc++`; you should not need to switch alternatives if you are on an up-to-date checkout.
+
+- `unrecognized command-line option '--no-undefined'` (often suggests `-Wno-undef`)
+	```
+	c++: error: unrecognized command-line option '--no-undefined'
+	```
+
+	On Fedora, this often comes from **`CXXFLAGS`** (or `CXXFLAGS_x86_64-unknown-linux-gnu`, etc.) inheriting **linker-only** options from RPM `%optflags` / hardened build defaults. Those are not valid for `c++ -c` (compile only); Clang then suggests `-Wno-undef`.
+
+	Current `lldb` `build.rs` strips common linker-only tokens from `CXXFLAGS*` before calling `cpp_build`. If it still fails:
+
+	```shell
+	echo "$CXXFLAGS"
+	env | grep '^CXXFLAGS'
+	# Temporarily:
+	unset CXXFLAGS
+	unset CXXFLAGS_x86_64-unknown-linux-gnu
+
+	unset RUSTFLAGS
+	cargo clean -p lldb
+	cargo build -p firedbg-rust-debugger --features lldb
+	```
+
 ### macOS
 
 > Supported macOS versions: macOS 13 (Ventura), macOS 14 (Sonoma)
