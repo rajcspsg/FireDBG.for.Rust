@@ -86,9 +86,12 @@ fn main() -> Result<(), Error> {
             }
             println!("cargo:rustc-link-lib=dylib=lldb");
             if target_os == "linux" {
-                // Generated C++ (cpp_closures) is built with the system C++ compiler default
-                // (libstdc++ on GCC). Rust's link step does not pull it in automatically.
+                // Generated C++ (cpp_closures) needs libstdc++ (__cxa_begin_catch, __gxx_personality_v0, …).
+                // Rust's link line uses `-Wl,--as-needed`, so if `-lstdc++` appears before the `rlib`
+                // objects that reference it, lld drops the library and the link fails. Force the link.
+                println!("cargo:rustc-link-arg=-Wl,--push-state,--no-as-needed");
                 println!("cargo:rustc-link-lib=dylib=stdc++");
+                println!("cargo:rustc-link-arg=-Wl,--pop-state");
             }
         }
     }

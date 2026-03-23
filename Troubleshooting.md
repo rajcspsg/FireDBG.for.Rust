@@ -97,6 +97,12 @@
 	cargo build -p firedbg-rust-debugger --features lldb
 	```
 
+- `undefined symbol: __gxx_personality_v0` / `__cxa_begin_catch` / `std::terminate()` (from `cpp_closures.cpp`)
+
+	The `lldb` crate embeds a small C++ object file that needs **libstdc++**. Rust’s default link line uses **`-Wl,--as-needed`**, so **lld** can drop **`-lstdc++`** if it appears too early, then fail with these undefined symbols.
+
+	Current `lldb` `build.rs` wraps **`-lstdc++`** with **`-Wl,--push-state,--no-as-needed` … `-Wl,--pop-state`**. If you still see this after `cargo clean -p lldb`, run with **`RUSTFLAGS='-C link-arg=-fuse-ld=bfd'`** (GNU ld instead of lld) once to compare, or report your `ld.lld --version`.
+
 ### macOS
 
 > Supported macOS versions: macOS 13 (Ventura), macOS 14 (Sonoma)
