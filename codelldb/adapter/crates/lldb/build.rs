@@ -23,7 +23,14 @@ fn main() -> Result<(), Error> {
         if target_os == "windows" {
             println!("cargo:rustc-link-lib=dylib=liblldb");
         } else {
-            build_config.cpp_set_stdlib(Some("c++"));
+            // `cpp_set_stdlib(Some("c++"))` passes `-stdlib=libc++`, which only Clang understands.
+            // Fedora and most Linux distros default `c++` to GCC, which errors on that flag; use the
+            // compiler default (libstdc++) instead. macOS uses Clang + libc++.
+            if target_os == "macos" {
+                build_config.cpp_set_stdlib(Some("c++"));
+            } else {
+                build_config.cpp_set_stdlib(None);
+            }
             println!("cargo:rustc-link-lib=dylib=lldb");
             if target_os == "linux" {
                 // Require all symbols to be defined in test runners
