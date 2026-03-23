@@ -35,6 +35,9 @@ fn main() -> Result<(), Error> {
             if target_os == "linux" {
                 // Require all symbols to be defined in test runners
                 println!("cargo:rustc-link-arg=--no-undefined");
+                // Generated C++ (cpp_closures) is built with the system C++ compiler default
+                // (libstdc++ on GCC). Rust's link step does not pull it in automatically.
+                println!("cargo:rustc-link-lib=dylib=stdc++");
             }
         }
     }
