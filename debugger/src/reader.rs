@@ -86,12 +86,48 @@ impl Val<ReaderContext> for ReaderContext {
     fn prim_v(&self, ty: &str, b: &[u8]) -> RValue {
         RValue::Prim(match ty {
             "bool" => PValue::bool(b[0] != 0),
-            "char" => PValue::char(
-                match char::from_u32(u32::from_ne_bytes(b[..].try_into().unwrap())) {
-                    Some(c) => c,
-                    None => return RValue::Opaque,
-                },
-            ),
+            // Rust `char` is 4 bytes; LLDB often reports C `char` as the same typename with 1 byte.
+            "char" => match b.len() {
+                1 => PValue::i8(i8::from_ne_bytes(b.try_into().unwrap())),
+                4 => PValue::char(
+                    match char::from_u32(u32::from_ne_bytes(b[..].try_into().unwrap())) {
+                        Some(c) => c,
+                        None => return RValue::Opaque,
+                    },
+                ),
+                _ => panic!("char: unexpected size {} for bytes {b:?}", b.len()),
+            },
+            // C / LLDB primitive names (Linux LLDB often uses these instead of Rust `i32`, etc.)
+            "int" | "signed int" => PValue::i32(i32::from_ne_bytes(b[..].try_into().unwrap())),
+            "unsigned int" => PValue::u32(u32::from_ne_bytes(b[..].try_into().unwrap())),
+            "short" | "short int" | "signed short" | "signed short int" => {
+                PValue::i16(i16::from_ne_bytes(b[..].try_into().unwrap()))
+            },
+            "unsigned short" | "unsigned short int" => {
+                PValue::u16(u16::from_ne_bytes(b[..].try_into().unwrap()))
+            },
+            "long" | "long int" | "signed long" | "signed long int" => match b.len() {
+                4 => PValue::i32(i32::from_ne_bytes(b[..].try_into().unwrap())),
+                8 => PValue::i64(i64::from_ne_bytes(b[..].try_into().unwrap())),
+                _ => panic!("long: unexpected size {} for bytes {b:?}", b.len()),
+            },
+            "unsigned long" | "unsigned long int" => match b.len() {
+                4 => PValue::u32(u32::from_ne_bytes(b[..].try_into().unwrap())),
+                8 => PValue::u64(u64::from_ne_bytes(b[..].try_into().unwrap())),
+                _ => panic!("unsigned long: unexpected size {} for bytes {b:?}", b.len()),
+            },
+            "long long"
+            | "long long int"
+            | "signed long long"
+            | "signed long long int"
+            | "__int64" => PValue::i64(i64::from_ne_bytes(b[..].try_into().unwrap())),
+            "unsigned long long" | "unsigned long long int" | "unsigned __int64" => {
+                PValue::u64(u64::from_ne_bytes(b[..].try_into().unwrap()))
+            },
+            "signed char" => PValue::i8(i8::from_ne_bytes(b[..].try_into().unwrap())),
+            "unsigned char" => PValue::u8(u8::from_ne_bytes(b[..].try_into().unwrap())),
+            "float" => PValue::f32(f32::from_ne_bytes(b[..].try_into().unwrap())),
+            "double" => PValue::f64(f64::from_ne_bytes(b[..].try_into().unwrap())),
             "u8" => PValue::u8(u8::from_ne_bytes(b[..].try_into().unwrap())),
             "i8" => PValue::i8(i8::from_ne_bytes(b[..].try_into().unwrap())),
             "u16" => PValue::u16(u16::from_ne_bytes(b[..].try_into().unwrap())),
