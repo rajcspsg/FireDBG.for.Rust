@@ -97,6 +97,8 @@ mod bytes;
 #[cfg(feature = "debugger")]
 mod debugger;
 mod event;
+mod rust_symbol;
+pub use rust_symbol::normalize_lldb_rust_function_name;
 mod reader;
 mod rvalue;
 pub mod typename;

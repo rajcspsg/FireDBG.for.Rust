@@ -186,7 +186,8 @@ fn assert_fn_name_matches(actual: &str, expected: &str) {
     // Newer Rust versions include full generic type parameters in function names
     // e.g., "foo::bar::<T>" instead of just "foo::bar"
     // Strip generic parameters for comparison
-    let actual_base = strip_generic_params(actual);
+    let actual = firedbg_rust_debugger::normalize_lldb_rust_function_name(actual);
+    let actual_base = strip_generic_params(&actual);
     let expected_base = strip_generic_params(expected);
     if actual_base != expected_base {
         assert_eq!(actual, expected);

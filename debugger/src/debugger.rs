@@ -408,7 +408,9 @@ fn run(mut params: DebuggerParams, mut producer: SeaProducer) -> Result<()> {
                     frame_id: frame.frame_id,
                     stack_pointer: sb_frame.sp(),
                     program_counter: sb_frame.pc(),
-                    function_name: sb_function.name().to_owned(),
+                    function_name: crate::rust_symbol::normalize_lldb_rust_function_name(
+                        sb_function.name(),
+                    ),
                     function_id: sb_function.id(),
                 });
 
