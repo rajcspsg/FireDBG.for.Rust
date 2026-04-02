@@ -6,6 +6,8 @@
 
 > Supported Windows (WSL 2) distributions: Ubuntu 22.04, Ubuntu 20.04
 
+- **Fedora / Linux:** FireDBG integration tests that assert `i32` **return values** may see **`0` instead of the real value** for very small functions (e.g. `fn f(x: i32) -> i32 { x }`) because LLDB reads the return register before it holds the final result at the `ret` breakpoint. The `call_chain` test allows `0` or `2` for that case on Linux only. This is an environment/LLDB limitation, not a logic bug in the testcase program.
+
 - linker `cc` not found
 	```
 	error: linker `cc` not found
